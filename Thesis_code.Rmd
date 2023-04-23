@@ -1,0 +1,2284 @@
+---
+title: "Thesis exploration"
+author: Emily Fernandez
+output: html_document
+date: "2023-02-23"
+---
+
+## Download packages
+```{r}
+install.packages("tidyverse")
+install.packages("dpylr")
+install.packages("tidyr")
+install.packages("modelr")
+install.packages("skimr")
+install.packages("scales")  
+install.packages("caTools")
+install.packages("hexbin")
+install.packages("ggiraphExtra")
+```
+
+
+## Libraries
+```{r, message = FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(modelr) 
+library(skimr)
+library(scales)
+library(caTools)
+library(hexbin)
+library(ggiraphExtra)
+```
+
+
+## Final Data Sets
+
+_Data Sets_
+```{r}
+global_final
+```
+
+```{r}
+mortality_final
+```
+
+
+
+_QUESTIONS_
+
+_1. Which Oceans/regions/countries has the most coral bleaching events appearing in the df?_
+```{r}
+global_final %>% 
+  group_by(Ocean_Name) %>% 
+  summarize(n= n()) %>% 
+  mutate()
+```
+
+```{r}
+ggplot(global_bleaching, aes(x=reorder(Ocean_Name, Ocean_Name, function(x)-length(x)))) +
+geom_bar(fill='red') +  labs(x='Ocean_Name')
+```
+
+```{r}
+global_final %>% 
+  group_by(Ecoregion_Name) %>% 
+  summarize(n= n()) %>% 
+  mutate() %>% 
+  top_n(10) 
+```
+
+```{r}
+global_bleaching %>% 
+   filter(Ecoregion_Name %in% c("Bahamas and Florida Keys", "Andaman Sea", "Belize and west Caribbean", "Hispaniola Puerto Rico and Lesser Antilles", "Society Islands French Polynesia", "North and central Red Sea", "Fiji", "Netherlands Antilles and south Caribbean", "Sulu Sea", "Central and northern Great Barrier Reef")) %>% 
+ggplot(aes(x=reorder(Ecoregion_Name, Ecoregion_Name, function(x)-length(x)))) +
+geom_bar(fill='red') +  labs(x='Region_Name') +
+  theme(axis.text.x = element_text(angle = 70 , vjust = 0.5))
+```
+
+#top 6 eco_regions
+```{r}
+global_bleaching %>% 
+   filter(Ecoregion_Name %in% c("Bahamas and Florida Keys", "Andaman Sea", "Belize and west Caribbean", "Hispaniola Puerto Rico and Lesser Antilles", "Society Islands French Polynesia", "North and central Red Sea")) %>% 
+ggplot(aes(x=reorder(Ecoregion_Name, Ecoregion_Name, function(x)-length(x)))) +
+geom_bar(fill='red') +  labs(x='Region_Name') +
+  theme(axis.text.x = element_text(angle = 70 , vjust = 0.5))
+```
+
+```{r}
+global_final %>% 
+  group_by(Country_Name) %>% 
+  summarize(n= n()) %>% 
+  mutate() %>% 
+  top_n(10) 
+```
+
+
+```{r}
+global_bleaching %>% 
+  filter(Country_Name %in% c("Austrailia", "Fiji", "French Polynesia", "Indonesia", "Japan", "Mexico", "Fiji", "Mexico", "Philippines", "United States", "Vietnam")) %>% 
+  ggplot(aes(x=reorder(Country_Name, Country_Name, function(x)-length(x)))) +
+geom_bar(fill='red') +  labs(x='Country_Name')
+```
+
+
+
+
+_2. What percentage of coral mortality is there by region or notable coral community?_
+
+
+# Average mortality by year and location
+```{r}
+mortality_year <-mortality_final %>% 
+  group_by(LOCATION, YEAR) %>%
+  summarize_at(vars('%_MORTALITY'), funs(mean(., na.rm=TRUE))) 
+mortality_year
+```
+# Average mortality by month and location
+```{r}
+mortality_month <-mortality_final %>% 
+  group_by(LOCATION, MONTH) %>%
+  summarize_at(vars('%_MORTALITY'), funs(mean(., na.rm=TRUE))) 
+mortality_month
+```
+# number of observations per location
+```{r}
+mortality_vis <- mortality_final %>% 
+  count(LOCATION) %>% 
+  arrange(desc(n)) %>% 
+  top_n(10)
+mortality_vis
+```
+#filter for number of observations per year by location
+```{r}
+mortality_final %>% 
+  count(LOCATION, YEAR) %>% 
+  top_n(15)
+```
+
+#plot for top locations with most observations
+```{r}
+mortality_final %>% 
+   filter(LOCATION %in% c("Florida", 'Saint Croix', 'Saint Thomas', 'Saint John', 'Gulf of Mexico', 'Florida Keys', 'Gulf of Mannar', 'Kaneohe Bay')) %>% 
+  ggplot(aes(x=reorder(LOCATION, LOCATION, function(x)-length(x)))) +
+  geom_bar(fill='red') +  labs(x='Location',y='Number of Bleaching Events', title='Number of Bleaching Events per Location') 
+```
+
+# facet plot 
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Florida", "Saint Thomas", "Saint Croix")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION)) + facet_wrap(facets = vars(LOCATION))
+```
+
+
+_Mortality by location by MONTH and YEAR_
+
+# Florida
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Florida")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION)) +  labs(x='Year',y='Mortality Percentage', title='Mortality Percentage In Florida') 
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Florida")) %>% 
+  ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION)) + labs(x='Month',y='Mortality Percentage', title='Mortality Percentage In Florida') 
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Florida")) %>% 
+  ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+# Saint Croix
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Saint Croix")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Saint Croix")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color= LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Saint Croix")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+# Saint Thomas
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Saint Thomas")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Saint Thomas")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color= LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Saint Thomas")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) +  geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+# Saint John
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Saint John")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Saint John")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color= LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Saint John")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+#Gulf of Mexico
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Gulf of Mexico")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Gulf of Mexico")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color=LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Gulf of Mexico")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+# Florida Keys
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Florida Keys")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Florida Keys")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color=LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Florida Keys")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month')
+```
+
+
+# Gulf of Mannar
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Gulf of Mannar")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Gulf of Mannar")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color=LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Gulf of Mannar")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+# Kaneohe Bay
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Kaneohe Bay")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Kaneohe Bay")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color=LOCATION)) + xlab('Month')
+```
+
+# Boxplot for month
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Kaneohe Bay")) %>% 
+ ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+
+
+_3. What countries/Regions are more suseptical to higher percentages of coral bleaching?_
+
+# Top ten countries of highest average bleaching
+```{r}
+country_bleaching_top <- global_final %>% 
+  group_by(Country_Name) %>% 
+  summarize_at(vars(Percent_Bleaching), funs(mean(., na.rm=TRUE))) %>% 
+  top_n(15, Percent_Bleaching)
+country_bleaching_top
+```
+
+# Average bleaching of countries by years
+```{r}
+country_bleaching <- global_final %>% 
+  group_by(Country_Name, Date_Year) %>% 
+  summarize_at(vars(Percent_Bleaching), funs(mean(., na.rm=TRUE)))
+country_bleaching
+```
+```{r}
+country_bleaching %>% 
+  count(Country_Name) %>% 
+  arrange(desc(n)) %>% 
+  top_n(10)
+```
+
+#Line chart
+```{r}
+country_bleaching %>% 
+  filter(Country_Name %in% c("Bahrain", "Chile", "Commonwealth of the Northern Mariana Islands", "Comoro Islands", "Ecuador", "Eritrea", "India", "Israel", "Kiribati", "Madagascar", "Samoa", "Seychelles",  "Singapore", "Tuvalu")) %>% 
+  filter(Date_Year %in% 1998:2010) %>% 
+  ggplot(aes(group=Country_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Country_Name, color=Country_Name)) + geom_point(aes(color = Country_Name)) 
+```
+
+
+_ECO REGION visualization_
+
+# average percent bleaching by ecoregion and year
+
+```{r}
+ecoregion_bleaching <- global_final %>% 
+  group_by(Ecoregion_Name, Date_Year) %>% 
+  summarize_at(vars(Percent_Bleaching), funs(mean(., na.rm=TRUE)))
+ecoregion_bleaching
+```
+# number of observations per region name 
+
+```{r}
+ecoregion_bleaching %>% 
+  count(Ecoregion_Name) %>% 
+  arrange(desc(n)) %>% 
+  top_n(10)
+```
+
+
+# filter for number of observations per year
+```{r}
+global_final %>% 
+  count(Ecoregion_Name, Date_Year) %>% 
+  top_n(15)
+```
+
+# visualization w highest number of observtions per year
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Cuba and Cayman Islands", "Jamaica", "South-east Philippines", "sulu Sea")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+# facet wrap
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Cuba and Cayman Islands", "Jamaica", "South-east Philippines", "sulu Sea")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) + facet_wrap(facets = vars(Ecoregion_Name))
+```
+
+# highest average percent bleaching
+```{r}
+eco_bleaching_top <- global_final %>% 
+  group_by(Ecoregion_Name) %>% 
+  summarize_at(vars(Percent_Bleaching), funs(mean(., na.rm=TRUE))) %>% 
+  top_n(15, Percent_Bleaching)
+eco_bleaching_top
+```
+
+# Visualization w the highest percent bleached
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("North-west Hawaii", "Lakshadweep Islands", "Cocos Island Costa Rica", "Central Vietnam")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+# facet
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("North-west Hawaii", "Lakshadweep Islands", "Cocos Island Costa Rica", "Central Vietnam")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) + facet_wrap(facets = vars(Ecoregion_Name))
+```
+
+
+# Visualizations w the most data in general
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Bahamas and Florida Keys", "Andaman Sea", "Belize and west Caribbean", "Hispaniola Puerto Rico and Lesser Antilles", "Society Islands French Polynesia", "North and central Red Sea", "Fiji", "Netherlands Antilles and south Caribbean", "Sulu Sea", "Central and northern Great Barrier Reef")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Society Islands French Polynesia", "North and central Red Sea", "Fiji", "Netherlands Antilles and south Caribbean", "Sulu Sea", "Central and northern Great Barrier Reef")) %>% 
+  filter(Date_Year %in% 2000:2020) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Society Islands French Polynesia", "North and central Red Sea", "Fiji", "Netherlands Antilles and south Caribbean", "Sulu Sea", "Central and northern Great Barrier Reef")) %>% 
+  filter(Date_Year %in% 2000:2020) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) + facet_wrap(facets = vars(Ecoregion_Name))
+```
+
+
+_Indivisual visualizations of eco-regions_
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Bahamas and Florida Keys")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Andaman Sea")) %>% 
+   filter(Date_Year %in% 2000:2020) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Belize and west Caribbean")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Hispaniola Puerto Rico and Lesser Antilles")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Central and northern Great Barrier Reef")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Society Islands French Polynesia")) %>% 
+  filter(Date_Year %in% 2000:2020) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("North and central Red Sea")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+```{r}
+ecoregion_bleaching %>% 
+  filter(Ecoregion_Name %in% c("Fiji")) %>% 
+   ggplot(aes(group=Ecoregion_Name, y=Percent_Bleaching, x=Date_Year)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color = Ecoregion_Name)) 
+```
+
+# Individual plots for month (boxplots and line charts)
+ 
+```{r}
+ecoregion_month <- global_final %>% 
+  group_by(Ecoregion_Name, Date_Month) %>% 
+  summarize_at(vars(Percent_Bleaching), funs(mean(., na.rm=TRUE)))
+ecoregion_month %>% 
+  count(Ecoregion_Name) %>% 
+  arrange(desc(n)) %>% 
+  top_n(10)
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Bahamas and Florida Keys")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Bahamas and Florida Keys")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Banda Sea and Molucca Islands")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Banda Sea and Molucca Islands")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching))  + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Belize and west Caribbean")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Belize and west Caribbean")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Central and northern Great Barrier Reef")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month')  
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Central and northern Great Barrier Reef")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Cuba and Cayman Islands")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month')  
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Cuba and Cayman Islands")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Fiji")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month')  
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Fiji")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Gulf of Thailand")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_line(aes(linetype = Ecoregion_Name, color=Ecoregion_Name)) + geom_point(aes(color=Ecoregion_Name)) + xlab('Month') 
+```
+
+```{r}
+ecoregion_month %>% 
+  filter(Ecoregion_Name %in% c("Gulf of Thailand")) %>% 
+   ggplot(aes(group=Ecoregion_Name, x=factor(Date_Month,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=Percent_Bleaching)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month') 
+```
+
+
+
+
+
+_4. What is the relationship between the global temperature and the levels of bleaching?_
+
+# Statistics of each model
+
+```{r}
+summary(temp_model)
+```
+```{r}
+summary(tempyear_model)
+```
+```{r}
+summary(temp_model2)
+```
+```{r}
+summary(temp_model3)
+```
+```{r}
+summary(temp_model4)
+```
+```{r}
+summary(temp_model5)
+```
+```{r}
+summary(temp_model6)
+```
+
+
+# First model on all of the data
+```{r}
+tempmod_data <- global_final %>% 
+  select(Temperature_Mean, Percent_Bleaching)
+tempmod_data
+```
+
+```{r}
+temp_model <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempmod_data)
+temp_model
+```
+
+```{r}
+grid <- tempmod_data %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(temp_model) # Adding the predictions of the model
+grid
+```
+
+```{r}
+res<- tempmod_data %>% add_residuals(temp_model) # Adding the residuals of the model
+res
+```
+
+```{r}
+full_join(grid, res) # Joining these in one table
+```
+
+```{r}
+summary(temp_model)
+```
+
+```{r}
+plot(temp_model)
+```
+
+# linear
+```{r}
+tempmod_data %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+```{r}
+library(plotly)
+```
+
+# Try quadtratic model
+```{r}
+ggplot(data=tempmod_data, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+
+# Spline 
+
+```{r}
+ggplot(data=tempmod_data, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 20))
+```
+
+#trying models on more recent data 
+
+```{r}
+tempyear_data <- global_final %>% 
+  filter(Date_Year == 2010:2023) %>% 
+  select(Temperature_Mean, Percent_Bleaching)
+tempmod_data
+```
+
+```{r}
+tempyear_model <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempyear_data)
+tempyear_model
+```
+
+```{r}
+grid.y <- tempyear_data %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(tempyear_model) # Adding the predictions of the model
+grid.y
+```
+
+```{r}
+res.y <- tempyear_data %>% add_residuals(tempyear_model) # Adding the residuals of the model
+res.y
+```
+
+```{r}
+full_join(grid.y, res.y) # Joining these in one table
+```
+
+# linear
+```{r}
+tempyear_data %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid.y, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+# Try quadtratic model
+```{r}
+ggplot(data=tempyear_data, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+
+# Spline 
+```{r}
+ggplot(data=tempyear_data, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 20))
+```
+
+
+_Trying models on specific eco regions_
+
+
+
+# Bahamas and FL
+
+```{r}
+tempmod_data2 <- global_final %>% 
+  filter(Ecoregion_Name == "Bahamas and Florida Keys") %>% 
+  select(Percent_Bleaching, Temperature_Mean)
+tempmod_data2
+``` 
+
+```{r}
+temp_model2 <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempmod_data2)
+temp_model2
+```
+
+```{r}
+grid2 <- tempmod_data2 %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(temp_model2) # Adding the predictions of the model
+grid2
+```
+
+```{r}
+res2 <- tempmod_data2 %>% add_residuals(temp_model2) # Adding the residuals of the model
+res2
+```
+
+```{r}
+full_join(grid2, res2) # Joining these in one table
+```
+
+linear
+```{r}
+tempmod_data2 %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid2, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=tempmod_data2, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+
+spline
+
+```{r}
+ggplot(data=tempmod_data2, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 20))
+```
+
+
+#Belize and west caribbean
+
+```{r}
+tempmod_data3 <- global_final %>% 
+  filter(Ecoregion_Name == "Belize and west Caribbean") %>% 
+  select(Percent_Bleaching, Temperature_Mean)
+tempmod_data3
+``` 
+
+```{r}
+temp_model3 <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempmod_data3)
+temp_model3
+```
+
+```{r}
+grid3 <- tempmod_data3 %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(temp_model2) # Adding the predictions of the model
+grid3
+```
+
+```{r}
+res3 <- tempmod_data3 %>% add_residuals(temp_model3) # Adding the residuals of the model
+res3
+```
+
+```{r}
+full_join(grid3, res3) # Joining these in one table
+```
+
+linear
+```{r}
+tempmod_data3 %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid3, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures in Belize and West Caribbean") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=tempmod_data3, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+
+```{r}
+ggplot(data=tempmod_data3, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 20))
+```
+
+
+
+# PR
+```{r}
+tempmod_data4 <- global_final %>% 
+  filter(Ecoregion_Name == "Hispaniola Puerto Rico and Lesser Antilles") %>% 
+  select(Percent_Bleaching, Temperature_Mean)
+tempmod_data4
+``` 
+
+```{r}
+temp_model4 <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempmod_data4)
+temp_model4
+```
+
+```{r}
+grid4 <- tempmod_data4 %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(temp_model4) # Adding the predictions of the model
+grid4
+```
+
+```{r}
+res4 <- tempmod_data4 %>% add_residuals(temp_model4) # Adding the residuals of the model
+res4
+```
+
+```{r}
+full_join(grid4, res4) # Joining these in one table
+```
+
+linear
+```{r}
+tempmod_data4 %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid4, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=tempmod_data4, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=tempmod_data4, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 10))
+```
+
+
+#Sulu sea
+```{r}
+tempmod_data5 <- global_final %>% 
+  filter(Ecoregion_Name == "Sulu Sea") %>% 
+  select(Percent_Bleaching, Temperature_Mean)
+tempmod_data5
+``` 
+
+```{r}
+temp_model5 <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempmod_data5)
+temp_model5
+```
+
+```{r}
+grid5 <- tempmod_data5 %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(temp_model5) # Adding the predictions of the model
+grid5
+```
+
+```{r}
+res5 <- tempmod_data5 %>% add_residuals(temp_model5) # Adding the residuals of the model
+res5
+```
+
+```{r}
+full_join(grid5, res5) # Joining these in one table
+```
+
+linear
+```{r}
+tempmod_data5 %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid5, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=tempmod_data5, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=tempmod_data5, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 10))
+```
+
+
+
+# Barrier reef 
+```{r}
+tempmod_data6 <- global_final %>% 
+  filter(Ecoregion_Name == "Central and northern Great Barrier Reef") %>% 
+  select(Percent_Bleaching, Temperature_Mean)
+tempmod_data6
+``` 
+
+
+```{r}
+temp_model6 <- lm(formula =Percent_Bleaching ~ Temperature_Mean, data = tempmod_data6)
+temp_model6
+```
+
+```{r}
+grid6 <- tempmod_data6 %>% 
+  data_grid(Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(temp_model6) # Adding the predictions of the model
+grid6
+```
+
+```{r}
+res6 <- tempmod_data6 %>% add_residuals(temp_model6) # Adding the residuals of the model
+res6
+```
+
+```{r}
+full_join(grid6, res6) # Joining these in one table
+```
+
+linear
+```{r}
+tempmod_data6 %>% ggplot() +
+  geom_point(aes(Temperature_Mean, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Temperature_Mean, y = pred), data = grid6, color = "red", size = 1) + xlab("Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=tempmod_data6, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=tempmod_data6, aes(Temperature_Mean, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 20))
+```
+
+
+_5. Is there a correlation between distances to land and severity of bleaching?_
+```{r}
+land_data <- global_final %>% 
+  select(Distance_to_Shore, Percent_Bleaching)
+```
+
+```{r}
+land_model <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = land_data)
+land_model
+```
+
+```{r}
+grid2 <- land_data %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(land_model) # Adding the predictions of the model
+grid2
+```
+
+```{r}
+res2 <- land_data %>% add_residuals(land_model) # Adding the residuals of the model
+res2
+```
+
+```{r}
+full_join(grid2, res2) # Joining these in one table
+```
+
+```{r}
+land_data %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = grid2, color = "red", size = 1) + xlab("Distance to Shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Distance to Shore") # Plotting the model
+```
+
+#quadtratic model
+
+```{r}
+ggplot(data=land_data, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+
+# Spline model 
+```{r}
+ggplot(data=land_data, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+# Trying on more recent data 
+
+```{r}
+landyear_data <- global_final %>% 
+  filter(Date_Year == 2010:2020) %>% 
+  select(Distance_to_Shore, Percent_Bleaching)
+```
+
+```{r}
+landyear_model <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = landyear_data)
+landyear_model
+```
+
+```{r}
+grid2.y <- land_data %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(landyear_model) # Adding the predictions of the model
+grid2.y
+```
+
+```{r}
+res2.y <- landyear_data %>% add_residuals(landyear_model) # Adding the residuals of the model
+res2.y
+```
+
+```{r}
+full_join(grid2.y, res2.y) # Joining these in one table
+```
+
+```{r}
+landyear_data %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = grid2.y, color = "red", size = 1) + xlab("Distance to Shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Distance to Shore") # Plotting the model
+```
+
+#quadtratic model
+
+```{r}
+ggplot(data=landyear_data, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+
+# Spline model 
+```{r}
+ggplot(data=landyear_data, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 10))
+```
+
+
+
+_Trying models on specific eco regions_
+
+
+# Bahamas and Fl
+
+```{r}
+land_data2 <- global_final %>% 
+  filter(Ecoregion_Name == "Bahamas and Florida Keys") %>% 
+  select(Percent_Bleaching, Distance_to_Shore)
+land_data2
+``` 
+
+```{r}
+land_model2 <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = land_data2)
+land_model2
+```
+
+```{r}
+lgrid2 <- land_data2 %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(land_model2) # Adding the predictions of the model
+lgrid2
+```
+
+```{r}
+lres2 <- land_data2 %>% add_residuals(land_model2) # Adding the residuals of the model
+lres2
+```
+
+```{r}
+full_join(lgrid2, lres2) # Joining these in one table
+```
+
+Linear
+```{r}
+land_data2 %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = lgrid2, color = "red", size = 1) + xlab("Distance to shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+Quadratic
+```{r}
+ggplot(data=land_data2, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=land_data2, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+#Belize and West Carribbeann
+
+```{r}
+land_data3 <- global_final %>% 
+  filter(Ecoregion_Name == "Belize and west Caribbean") %>% 
+  select(Percent_Bleaching, Distance_to_Shore)
+land_data3
+``` 
+
+```{r}
+land_model3 <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = land_data3)
+land_model3
+```
+
+```{r}
+lgrid3 <- land_data3 %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(land_model3) # Adding the predictions of the model
+lgrid3
+```
+
+```{r}
+lres3 <- land_data3 %>% add_residuals(land_model3) # Adding the residuals of the model
+lres3
+```
+
+```{r}
+full_join(lgrid3, lres3) # Joining these in one table
+```
+
+linear
+```{r}
+land_data3 %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = lgrid3, color = "red", size = 1) + xlab("Distance to shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quadtratic
+```{r}
+ggplot(data=land_data3, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+
+```{r}
+ggplot(data=land_data3, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+# PR
+```{r}
+land_data4 <- global_final %>% 
+  filter(Ecoregion_Name == "Hispaniola Puerto Rico and Lesser Antilles") %>% 
+  select(Percent_Bleaching, Distance_to_Shore)
+land_data4
+``` 
+
+```{r}
+land_model4 <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = land_data2)
+land_model4
+```
+
+```{r}
+lgrid4 <- land_data4 %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(land_model4) # Adding the predictions of the model
+lgrid4
+```
+
+```{r}
+lres4 <- land_data4 %>% add_residuals(land_model4) # Adding the residuals of the model
+lres4
+```
+
+```{r}
+full_join(lgrid4, lres4) # Joining these in one table
+```
+
+linear
+```{r}
+land_data4 %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = lgrid4, color = "red", size = 1) + xlab("Distance to shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=land_data4, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=land_data4, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+#Sulu sea 
+
+```{r}
+land_data5 <- global_final %>% 
+  filter(Ecoregion_Name == "Sulu Sea") %>% 
+  select(Percent_Bleaching, Distance_to_Shore)
+land_data5
+``` 
+
+```{r}
+land_model5 <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = land_data5)
+land_model5
+```
+
+```{r}
+lgrid5 <- land_data5 %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(land_model5) # Adding the predictions of the model
+lgrid5
+```
+
+```{r}
+lres5 <- land_data5 %>% add_residuals(land_model5) # Adding the residuals of the model
+lres5
+```
+
+```{r}
+full_join(lgrid5, lres5) # Joining these in one table
+```
+
+linear
+```{r}
+land_data5 %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = lgrid5, color = "red", size = 1) + xlab("Distance to shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=land_data5, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=land_data5, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 3))
+```
+
+
+
+# Barrier reef
+```{r}
+land_data6 <- global_final %>% 
+  filter(Ecoregion_Name == "Central and northern Great Barrier Reef") %>% 
+  select(Percent_Bleaching, Distance_to_Shore)
+land_data6
+``` 
+
+```{r}
+land_model6 <- lm(formula =Percent_Bleaching ~ Distance_to_Shore, data = land_data6)
+land_model6
+```
+
+```{r}
+lgrid6 <- land_data2 %>% 
+  data_grid(Distance_to_Shore) %>% # Collecting the mean temps
+  add_predictions(land_model6) # Adding the predictions of the model
+lgrid6
+```
+
+```{r}
+lres6 <- land_data6 %>% add_residuals(land_model6) # Adding the residuals of the model
+lres6
+```
+
+```{r}
+full_join(lgrid6, lres6) # Joining these in one table
+```
+
+linear
+```{r}
+land_data6 %>% ggplot() +
+  geom_point(aes(Distance_to_Shore, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Distance_to_Shore, y = pred), data = lgrid6, color = "red", size = 1) + xlab("Distance to shore") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=land_data6, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=land_data6, aes(Distance_to_Shore, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+
+_6. Is there a relationship between the depth of the coral communities and bleaching?_
+
+
+```{r}
+depth_data <- global_final %>% 
+  select(Depth_m, Percent_Bleaching)
+```
+
+```{r}
+depth_model <- lm(formula =Percent_Bleaching ~ Depth_m, data = depth_data)
+depth_model
+```
+
+```{r}
+summary(depth_model)
+```
+
+```{r}
+grid3 <- depth_data %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depth_model) # Adding the predictions of the model
+grid3
+```
+
+```{r}
+res3 <- depth_data %>% add_residuals(depth_model) # Adding the residuals of the model
+res3
+```
+
+```{r}
+full_join(grid3, res3) # Joining these in one table
+```
+
+```{r}
+depth_data %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 0.1) +
+  geom_line(aes(x = Depth_m, y = pred), data = grid3, color = "red", size = 1) + xlab("Depth of Coral") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Depth of Coral") # Plotting the model
+```
+
+
+# Try quadtratic model
+
+```{r}
+ggplot(data=depth_data, aes(Depth_m,Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+# Spline
+```{r}
+ggplot(data=depth_data, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+# Try more recent data
+```{r}
+depthyear_data <- global_final %>% 
+  filter(Date_Year == 2010:2023) %>% 
+  select(Depth_m, Percent_Bleaching)
+```
+
+```{r}
+depthyear_model <- lm(formula =Percent_Bleaching ~ Depth_m, data = depthyear_data)
+depthyear_model
+```
+
+```{r}
+summary(depthyear_model)
+```
+
+```{r}
+grid3.y <- depthyear_data %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depthyear_model) # Adding the predictions of the model
+grid3.y
+```
+
+```{r}
+res3.y <- depthyear_data %>% add_residuals(depthyear_model) # Adding the residuals of the model
+res3.y
+```
+
+```{r}
+full_join(grid3.y, res3.y) # Joining these in one table
+```
+
+```{r}
+depthyear_data %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 0.1) +
+  geom_line(aes(x = Depth_m, y = pred), data = grid3.y, color = "red", size = 1) + xlab("Depth of Coral") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Depth of Coral") # Plotting the model
+```
+
+
+# Try quadtratic model
+
+```{r}
+ggplot(data=depthyear_data, aes(Depth_m,Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+# Spline
+```{r}
+ggplot(data=depthyear_data, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+
+_Models on eco regions_
+
+#Bahamas and FL
+
+```{r}
+depth_data2 <- global_final %>% 
+  filter(Ecoregion_Name == "Bahamas and Florida Keys") %>% 
+  select(Percent_Bleaching, Depth_m)
+depth_data2
+``` 
+
+```{r}
+depth_model2 <- lm(formula =Percent_Bleaching ~ Depth_m, data = depth_data2)
+depth_model2
+```
+
+```{r}
+dgrid2 <- depth_data2 %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depth_model2) # Adding the predictions of the model
+dgrid2
+```
+
+```{r}
+dres2 <- depth_data2 %>% add_residuals(depth_model2) # Adding the residuals of the model
+dres2
+```
+
+```{r}
+full_join(dgrid2, dres2) # Joining these in one table
+```
+
+linear
+```{r}
+depth_data2 %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Depth_m, y = pred), data = dgrid2, color = "red", size = 1) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=depth_data2, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=depth_data2, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+#Belize and West Carribbeann
+
+```{r}
+depth_data3 <- global_final %>% 
+  filter(Ecoregion_Name == "Belize and west Caribbean") %>% 
+  select(Percent_Bleaching, Depth_m)
+depth_data3
+``` 
+
+```{r}
+depth_model3 <- lm(formula =Percent_Bleaching ~ Depth_m, data = depth_data3)
+depth_model3
+```
+
+```{r}
+dgrid3 <- depth_data3 %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depth_model3) # Adding the predictions of the model
+dgrid3
+```
+
+```{r}
+dres3 <- depth_data3 %>% add_residuals(depth_model3) # Adding the residuals of the model
+dres3
+```
+
+```{r}
+full_join(dgrid3, dres3) # Joining these in one table
+```
+
+linear
+```{r}
+depth_data3 %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Depth_m, y = pred), data = dgrid3, color = "red", size = 1) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=depth_data3, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=depth_data3, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+# PR
+```{r}
+depth_data4 <- global_final %>% 
+  filter(Ecoregion_Name == "Hispaniola Puerto Rico and Lesser Antilles") %>% 
+  select(Percent_Bleaching, Depth_m)
+depth_data4
+``` 
+
+```{r}
+depth_model4 <- lm(formula =Percent_Bleaching ~ Depth_m, data = depth_data4)
+depth_model4
+```
+
+```{r}
+dgrid4 <- depth_data4 %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depth_model4) # Adding the predictions of the model
+dgrid4
+```
+
+```{r}
+dres4 <- depth_data4 %>% add_residuals(depth_model4) # Adding the residuals of the model
+dres4
+```
+
+```{r}
+full_join(dgrid4, dres4) # Joining these in one table
+```
+
+linear
+```{r}
+depth_data4 %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Depth_m, y = pred), data = dgrid4, color = "red", size = 1) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=depth_data4, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=depth_data4, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 10))
+```
+
+
+#Sulu sea 
+
+```{r}
+depth_data5 <- global_final %>% 
+  filter(Ecoregion_Name == "Sulu Sea") %>% 
+  select(Percent_Bleaching, Depth_m)
+depth_data5
+``` 
+
+```{r}
+depth_model5 <- lm(formula =Percent_Bleaching ~ Depth_m, data = depth_data5)
+depth_model5
+```
+
+```{r}
+dgrid5 <- depth_data2 %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depth_model5) # Adding the predictions of the model
+dgrid5
+```
+
+```{r}
+dres5 <- depth_data5 %>% add_residuals(depth_model5) # Adding the residuals of the model
+dres5
+```
+
+```{r}
+full_join(dgrid5, dres5) # Joining these in one table
+```
+
+linear
+```{r}
+depth_data5 %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Depth_m, y = pred), data = dgrid5, color = "red", size = 1) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=depth_data5, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+Spline
+
+```{r}
+ggplot(data=depth_data5, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + geom_line(data = spline.d5, aes(x = x, y = y))
+```
+
+
+# Barrier reef
+```{r}
+depth_data6 <- global_final %>% 
+  filter(Ecoregion_Name == "Central and northern Great Barrier Reef") %>% 
+  select(Percent_Bleaching, Depth_m)
+depth_data6
+``` 
+
+```{r}
+depth_model6 <- lm(formula =Percent_Bleaching ~ Depth_m, data = depth_data6)
+depth_model6
+```
+
+```{r}
+dgrid6 <- depth_data6 %>% 
+  data_grid(Depth_m) %>% # Collecting the mean temps
+  add_predictions(depth_model6) # Adding the predictions of the model
+dgrid6
+```
+
+```{r}
+dres6 <- depth_data6 %>% add_residuals(depth_model6) # Adding the residuals of the model
+dres6
+```
+
+```{r}
+full_join(dgrid6, dres6) # Joining these in one table
+```
+
+linear
+```{r}
+depth_data6 %>% ggplot() +
+  geom_point(aes(Depth_m, Percent_Bleaching), alpha = 1/3) +
+  geom_line(aes(x = Depth_m, y = pred), data = dgrid6, color = "red", size = 1) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=depth_data6, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=depth_data5, aes(Depth_m, Percent_Bleaching)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 5))
+```
+
+
+
+_7. Is there a correlation between temperature, distances to land,  and depth to severity of bleaching?_
+
+# Model on all of the data
+```{r}
+all_data <- global_final %>% 
+  select(Distance_to_Shore, Depth_m, Temperature_Mean, Percent_Bleaching) %>% 
+  mutate_all(~round(., 0))
+all_data
+```
+
+```{r}
+all_model <- lm(formula =Percent_Bleaching ~ Distance_to_Shore * Depth_m * Temperature_Mean, data = all_data)
+all_model
+```
+
+```{r}
+grid.a <- all_data %>% 
+  data_grid(Distance_to_Shore, Depth_m, Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(all_model) # Adding the predictions of the 
+grid.a
+```
+
+```{r}
+res.a <- all_data %>% add_residuals(all_model) # Adding the residuals of the model
+res.a
+```
+
+```{r}
+full_join(grid.a, res.a) # Joining these in one table
+```
+
+
+```{r}
+all <- all_data %>% 
+  data_grid(
+    Distance_to_Shore = seq_range(Distance_to_Shore, 6), 
+    Depth_m = seq_range(Depth_m, 6), 
+    Temperature_Mean = seq_range(Temperature_Mean, 6) 
+  )
+all
+```
+
+
+```{r}
+grid.a2 <- all %>% 
+  data_grid(Distance_to_Shore, Depth_m, Temperature_Mean) %>%
+  add_predictions(all_model)
+grid.a2
+```
+
+```{r}
+res.a2 <- all %>% add_residuals(all_model) # Adding the residuals of the model
+res.a2
+```
+
+```{r}
+full_join(grid.a2, res.a2) # Joining these in one table
+```
+
+```{r}
+summary(all_model)
+```
+
+
+
+# Visualization attemptsfor all model
+# switched around the x y and groups and facet to find the best fit
+
+```{r}
+all %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x = Distance_to_Shore , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Depth_m) + ylim(c(0,100))
+```
+
+Best fit
+```{r}
+all %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x = Depth_m , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Distance_to_Shore) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures and Depth")
+```
+
+```{r}
+all %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x =Temperature_Mean , y = pred, color = Distance_to_Shore , group =Distance_to_Shore))  + facet_wrap(~Depth_m) 
+```
+
+```{r}
+all %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x =Depth_m , y = pred, color = Distance_to_Shore , group = Distance_to_Shore))  + facet_wrap(~Temperature_Mean)
+```
+
+```{r}
+all %>% 
+  add_predictions(all_model) %>%
+  ggplot() + geom_tile(aes(x = Depth_m, y = Distance_to_Shore, fill = pred)) +facet_wrap(~Temperature_Mean)
+```
+
+```{r}
+all %>% 
+  add_predictions(all_model) %>%
+  ggplot() + geom_tile(aes(x = Temperature_Mean, y = Distance_to_Shore, fill = pred)) +facet_wrap(~Depth_m)
+```
+
+```{r}
+all %>% 
+  add_predictions(all_model) %>%
+  ggplot() + geom_tile(aes(x = Temperature_Mean, y = Depth_m, fill = pred)) +facet_wrap(~Distance_to_Shore)
+```
+
+
+#Finding outliers of all_data
+
+```{r}
+ggplot(all_data) +
+  aes(x = Depth_m) +
+  geom_histogram(bins = 30L, fill = "#0c4c8a") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(all_data) +
+  aes(x = "", y = Depth_m) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(all_data) +
+  aes(x = Distance_to_Shore) +
+  geom_histogram(bins = 30L, fill = "#0c4c8a") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(all_data) +
+  aes(x = "", y = Distance_to_Shore) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+```
+
+
+```{r}
+ggplot(all_data) +
+  aes(x = Temperature_Mean) +
+  geom_histogram(bins = 30L, fill = "#0c4c8a") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(all_data) +
+  aes(x = "", y = Temperature_Mean) +
+  geom_boxplot(fill = "#0c4c8a") +
+  theme_minimal()
+```
+
+# All data w/o outliers
+```{r}
+no_out<- all_data %>% 
+  filter(Temperature_Mean >= 75) %>% 
+  filter(Depth_m <= 25)
+```
+
+# Model w no outlier
+
+```{r}
+all_model.o <- lm(formula =Percent_Bleaching ~ Distance_to_Shore * Depth_m * Temperature_Mean, data = no_out)
+all_model.o
+```
+
+```{r}
+summary(all_model.o)
+```
+
+```{r}
+all.o <-no_out %>% 
+  data_grid(
+    Distance_to_Shore = seq_range(Distance_to_Shore, 6), 
+    Depth_m = seq_range(Depth_m, 6), 
+    Temperature_Mean = seq_range(Temperature_Mean, 6) 
+  )
+all.o
+```
+
+```{r}
+grid.0 <- all.o %>% 
+  data_grid(Distance_to_Shore, Depth_m, Temperature_Mean) %>%
+  add_predictions(all_model)
+grid.0
+```
+
+```{r}
+res.o <- all.o %>% add_residuals(all_model) # Adding the residuals of the model
+res.o
+```
+
+```{r}
+all.o %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x = Distance_to_Shore , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Depth_m) + ylim(c(0,100))
+```
+
+Best fit
+```{r}
+all.o %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x = Depth_m , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Distance_to_Shore) + xlab("Depth") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Global Temperatures and Depth Without Outliers")
+```
+
+
+```{r}
+all.o %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x =Temperature_Mean , y = pred, color = Distance_to_Shore , group =Distance_to_Shore))  + facet_wrap(~Depth_m) 
+```
+
+```{r}
+all.o %>% 
+  add_predictions(all_model)%>%
+  ggplot() + 
+  geom_line(aes(x =Depth_m , y = pred, color = Distance_to_Shore , group = Distance_to_Shore))  + facet_wrap(~Temperature_Mean)
+```
+
+```{r}
+all.o %>% 
+  add_predictions(all_model) %>%
+  ggplot() + geom_tile(aes(x = Depth_m, y = Distance_to_Shore, fill = pred)) +facet_wrap(~Temperature_Mean)
+```
+
+```{r}
+all.o %>% 
+  add_predictions(all_model) %>%
+  ggplot() + geom_tile(aes(x = Temperature_Mean, y = Distance_to_Shore, fill = pred)) +facet_wrap(~Depth_m)
+```
+
+```{r}
+all.o %>% 
+  add_predictions(all_model) %>%
+  ggplot() + geom_tile(aes(x = Temperature_Mean, y = Depth_m, fill = pred)) +facet_wrap(~Distance_to_Shore)
+```
+
+
+
+# Logistic regression attempts on models
+
+```{r}
+log_data <- all_data %>% 
+  mutate(Percent_Bleaching= Percent_Bleaching/100)
+```
+
+
+```{r}
+log_data2 <-all_data %>% 
+  mutate(Percent_Bleaching= Percent_Bleaching/100) %>% 
+  data_grid(
+    Distance_to_Shore = seq_range(Distance_to_Shore, 6), 
+    Depth_m = seq_range(Depth_m, 6), 
+    Temperature_Mean = seq_range(Temperature_Mean, 6) 
+  )
+log_data2
+```
+
+
+```{r}
+log_model.n <-
+log_data %>%  glm(formula = Percent_Bleaching ~ Temperature_Mean * Depth_m * Distance_to_Shore, family = binomial)
+```
+
+#logistic regressions for indiv vars
+```{r}
+ggplot(log_data, aes(x=Temperature_Mean, y=Percent_Bleaching)) + 
+  geom_point(alpha=.5) +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))
+```
+
+```{r}
+ggplot(log_data, aes(x=Distance_to_Shore, y=Percent_Bleaching)) + 
+  geom_point(alpha=.5) +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))
+```
+
+```{r}
+ggplot(log_data, aes(x=Depth_m, y=Percent_Bleaching)) + 
+  geom_point(alpha=.5) +
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))
+```
+
+# log regression for all data
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n)%>%
+  ggplot() + 
+  geom_line(aes(x = Distance_to_Shore , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Depth_m) + ylim(c(0,100))
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n)%>%
+  ggplot() + 
+  geom_line(aes(x = Depth_m , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Distance_to_Shore)
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n)%>%
+  ggplot() + 
+  geom_line(aes(x = Depth_m , y = pred, color = Temperature_Mean , group =Temperature_Mean))  + facet_wrap(~Distance_to_Shore)
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n)%>%
+  ggplot() + 
+  geom_line(aes(x =Temperature_Mean , y = pred, color = Distance_to_Shore , group =Distance_to_Shore))  + facet_wrap(~Depth_m) 
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n)%>%
+  ggplot() + 
+  geom_line(aes(x =Depth_m , y = pred, color = Distance_to_Shore , group = Distance_to_Shore))  + facet_wrap(~Temperature_Mean)
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n) %>%
+  ggplot() + geom_tile(aes(x = Depth_m, y = Distance_to_Shore, fill = pred)) +facet_wrap(~Temperature_Mean)
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n) %>%
+  ggplot() + geom_tile(aes(x = Temperature_Mean, y = Distance_to_Shore, fill = pred)) +facet_wrap(~Depth_m)
+```
+
+```{r}
+log_data2 %>% 
+  add_predictions(log_model.n) %>%
+  ggplot() + geom_tile(aes(x = Temperature_Mean, y = Depth_m, fill = pred)) +facet_wrap(~Distance_to_Shore)
+```
+
+
+
+
+_8. Is there a relationship between the exposure and bleaching?_
+
+```{r}
+exposure_data <- global_final %>% 
+  select(Percent_Bleaching, Exposure, Temperature_Mean) %>% 
+  mutate_if(is.integer, ~round(., 0))
+exposure_data 
+```
+
+
+```{r}
+exposure_mod <- lm(formula =Percent_Bleaching ~ Exposure + Temperature_Mean, data = exposure_data)
+exposure_mod
+```
+
+```{r}
+grid.e <- exposure_data  %>% 
+  data_grid(Exposure, Temperature_Mean) %>% # Collecting the mean temps
+  add_predictions(exposure_mod) # Adding the predictions of the 
+grid.e
+```
+
+```{r}
+res.e <- exposure_data %>% add_residuals(exposure_mod) # Adding the residuals of the model
+res.e
+```
+
+```{r}
+full_join(grid.e, res.e) # Joining these in one table
+```
+
+```{r}
+exposure_data %>% 
+ggplot(aes(x=Exposure, y=Percent_Bleaching)) + geom_boxplot()
+```
+
+
+# Bar chart w averages per category
+ 
+```{r}
+exp_mean <- exposure_data %>% 
+  group_by(Exposure) %>% 
+   summarize_at(vars('Percent_Bleaching'), funs(mean(., na.rm=TRUE))) 
+exp_mean
+```
+
+```{r}
+exp_mean %>% 
+  ggplot(aes(y=Percent_Bleaching, x=Exposure, fill=Exposure)) + geom_col(position="dodge", stat="identity")
+```
+
+# Models 
+
+# linear
+```{r}
+exposure_data %>% ggplot(aes(Temperature_Mean,Percent_Bleaching,col=Exposure)) +
+       geom_point() + 
+       geom_smooth(method="lm", color="black") + facet_grid(.~Exposure) + xlab("Average Temperature") + ylab("Percent Bleaching") + ggtitle("Percent Bleaching based on Average Temperatures and Exposure")
+```
+
+# Try quadtratic model
+```{r}
+exposure_data %>% ggplot(aes(Percent_Bleaching, Temperature_Mean,col=Exposure)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2), color="black") + facet_grid(.~Exposure)
+```
+
+
+# Spline 
+```{r}
+exposure_data %>% ggplot(aes(Percent_Bleaching, Temperature_Mean,col=Exposure)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 20), color="black") + facet_grid(.~Exposure)
+```
+
+
+
+_9 Broward county case study_
+
+# Find all broward country reefs
+
+```{r}
+broward<- mortality_final %>% 
+  filter(grepl("Broward", LOCATION,)) %>% 
+  select(LOCATION, '%_MORTALITY', YEAR, MONTH) %>% 
+  mutate_at(c('YEAR', 'MONTH'),as.numeric)
+broward
+```
+
+# Upload temperature data
+```{r}
+browardtemps <- read_csv("broward_temps.csv") %>%  # Uploading the third data set into R
+  select(YEAR, meanTemp, MONTH) %>% 
+  group_by(YEAR, MONTH) %>% summarize(mean(meanTemp))
+browardtemps
+```
+
+# Merge data sets
+```{r}
+broward_merge <- left_join(broward, browardtemps, by = c( "YEAR", "MONTH")) %>% # Doing a left join to combine the two data sets
+  rename('Temp' = 'mean(meanTemp)')
+broward_merge
+```
+
+
+
+# Broward county plots for month and year
+```{r}
+mortality_year %>% 
+  filter(LOCATION %in% c("Inner Reef, Broward, Florida", "Inshore, Broward, Florida", "Outer Reef, Broward, Florida" ,"Broward County, Florida- 2nd Reef", "Broward County, Florida- 3rdReef", "Broward County, Florida- 1st Reef")) %>% 
+  ggplot(aes(group=LOCATION, x=YEAR, y=`%_MORTALITY`)) +  geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color = LOCATION))
+```
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Inner Reef, Broward, Florida", "Inshore, Broward, Florida", "Outer Reef, Broward, Florida" ,"Broward County, Florida- 2nd Reef", "Broward County, Florida- 3rdReef", "Broward County, Florida- 1st Reef")) %>% 
+  ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_line(aes(linetype = LOCATION, color=LOCATION)) + geom_point(aes(color=LOCATION)) + xlab('Month')
+```
+
+# The red and yellow don't show up because there is only 3 data points for each and they are all zero, can slightly see dots on the green line.
+
+```{r}
+mortality_month %>% 
+  filter(LOCATION %in% c("Inner Reef, Broward, Florida", "Inshore, Broward, Florida", "Outer Reef, Broward, Florida" ,"Broward County, Florida- 2nd Reef", "Broward County, Florida- 3rdReef", "Broward County, Florida- 1st Reef")) %>% 
+  ggplot(aes(group=LOCATION, x=factor(MONTH,level=c('1','2','3','4','5','6','7','8','9','10','11','12')), y=`%_MORTALITY`)) + geom_boxplot(outlier.colour="red", outlier.shape=8,outlier.size=4) + xlab('Month')
+```
+
+Models:
+
+```{r}
+broward_model <- lm(formula = `%_MORTALITY` ~ Temp, data = broward_merge)
+broward_model
+```
+
+```{r}
+grid.b <- broward_merge %>% 
+  data_grid(Temp) %>% # Collecting the mean temps
+  add_predictions(broward_model) # Adding the predictions of the model
+grid.b
+```
+
+```{r}
+res.b <- broward_merge %>% add_residuals(broward_model) # Adding the residuals of the model
+res.b
+```
+
+```{r}
+full_join(grid.b, res.b) # Joining these in one table
+```
+
+linear
+```{r}
+broward_merge %>% ggplot() +
+  geom_point(aes(Temp, `%_MORTALITY`), alpha = 1/3) +
+  geom_line(aes(x = Temp, y = pred), data = grid.b, color = "red", size = 1) + xlab("Average Temperature") + ylab("Percent Mortality") + ggtitle("Percent Mortality based on Average Temperatures") # Plotting the model
+```
+
+quad
+```{r}
+ggplot(data=broward_merge, aes(Temp, `%_MORTALITY`)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~I(x^3)+I(x^2))
+```
+
+spline
+```{r}
+ggplot(data=broward_merge, aes(Temp, `%_MORTALITY`)) +
+       geom_point() + 
+       geom_smooth(method="lm", formula=y~splines::ns(x, df = 3))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,119 @@
+---
+title: "Thesis Data"
+author: "Emily Fernandez"
+date: "1/25/2023"
+output: pdf
+---
+
+## Download packages
+```{r}
+install.packages("tidyverse")
+install.packages("dpylr")
+install.packages("tidyr")
+install.packages("modelr")
+install.packages("skimr")
+install.packages("naniar")
+```
+
+
+## Libraries
+```{r, message = FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(modelr) 
+library(skimr)
+library(naniar)
+```
+
+
+_Data Set 1_
+```{r}
+bleach_data <- read_csv("Bleaching Database.csv") %>% # Uploading the data set into R
+  rename(LAT = LATITUDE, LON = LONGITUDE) %>% # changing variable names to match other data set
+     select( -c(SURVEY_TYPE,	SOURCE, CITATION, COMMENTS, DATABASE_CODE, QC_CODE))
+bleach_data
+```
+
+
+_Data Set 2_
+```{r}
+coral_data <- read_csv("CoralBleaching.csv") %>%  # Uploading the second data set into R
+ select(1:11)
+coral_data
+```
+
+
+_merge test_
+```{r}
+data_merge <- left_join(bleach_data, coral_data, by = c("MONTH", "YEAR", "LAT", "LON", "COUNTRY", "LOCATION", "SEVERITY_CODE")) # Doing a left join to combine the two data sets
+data_merge
+```
+
+
+# Taking out columns for Bleach Final DF
+```{r}
+bleach_final <- data_merge %>% 
+  select (-c("SITE_NAME", "DATE", "MONTHS_SINCE_PEAK", "DEPTH_RAW", 21:23, 27:30, '%_MORTALITY', 	'%_MORTALITY_RAW', OTHER_DRIVERS)) %>% 
+  mutate(OCEAN_REGION=str_replace(OCEAN_REGION, "NA Pacific Ocean", "Pacific Ocean")) 
+bleach_final
+```
+
+
+# Find what data mortality data is available, regions, years, subset of data 
+```{r}
+mortality <- data_merge %>% 
+  drop_na('%_MORTALITY', '%_BLEACHED', '%_BLEACHED_RAW', OCEAN_REGION) 
+mortality
+```
+
+
+# na values on mortality
+```{r}
+mortality %>% 
+  summarize_all(funs(sum(is.na(.))))
+```
+
+
+# Subset Data set on mortality
+
+
+```{r}
+mortality_final <- mortality %>% 
+  select (1:7,9:10,14:19) %>% 
+  mutate(OCEAN_REGION=str_replace(OCEAN_REGION, "NA Pacific Ocean", "Pacific Ocean")) %>% 
+  mutate_all(funs(str_replace(., "%", ""))) %>% 
+  mutate_at(c('LAT', 'LON', '%_BLEACHED','%_BLEACHED_RAW', '%_MORTALITY', '%_MORTALITY_RAW'),as.numeric)
+mortality_final
+```
+
+# checking distinct values
+```{r}
+mortality_final %>% 
+  select(YEAR) %>% 
+  table()
+```
+
+```{r}
+mortality_final %>% 
+  select(OCEAN_REGION) %>% 
+  table()
+```
+# Overview on data sets
+```{r}
+skim(bleach_final) 
+```
+
+```{r}
+skim(mortality_final)
+```
+
+# How many bleaching events are there per Ocean region?
+```{r}
+  ggplot(mortality_final, aes(x=reorder(OCEAN_REGION, OCEAN_REGION, function(x)-length(x)))) +
+geom_bar(fill='light blue') +  labs(x='Ocean Name', y='Number of Bleaching Events', title= 'Number of Bleaching events per Ocean Region')
+```
+
+
+
+

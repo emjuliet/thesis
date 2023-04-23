@@ -1,0 +1,96 @@
+---
+title: "Global data"
+output: html_document
+date: "2023-02-24"
+---
+
+## Download packages
+```{r}
+install.packages("tidyverse")
+install.packages("dpylr")
+install.packages("tidyr")
+install.packages("modelr")
+install.packages("skimr")
+install.packages("naniar")
+install.packages("weathermetrics")
+install.packages("plotly")
+```
+
+
+## Libraries
+```{r, message = FALSE}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(modelr) 
+library(skimr)
+library(naniar)
+library(weathermetrics)
+library(plotly)
+```
+
+
+
+
+_Data Set_
+```{r}
+global_bleaching <- read_csv("global_bleaching_environmental.csv", skip =6) # Uploading the third data set into R
+global_bleaching
+```
+
+# Finding NA Values for global df
+```{r}
+global_bleaching %>% 
+  summarize_all(funs(sum(is.na(.))))
+```
+
+# Taking out columns, and labeling NA labels
+
+
+```{r}
+global_final <- global_bleaching %>% 
+  replace(global_bleaching == -9999, NA) %>% 
+  select(-c(Site_Name, 60:62)) %>% 
+  mutate_at(c('Temperature_Kelvin', 'Temperature_Mean', 'Temperature_Minimum', 'Temperature_Maximum'),kelvin.to.fahrenheit)
+global_final
+```
+#Overview on the data set
+```{r}
+skim(global_bleaching)
+```
+
+# Finding how much data there is per year
+```{r}
+global_final %>% 
+  select(Date_Year) %>% 
+  table()
+```
+
+
+#Finding out ocean data
+```{r}
+global_bleaching %>% 
+ count(Ocean_Name)
+```
+
+
+# How many bleaching events are there per Ocean region?
+```{r}
+ggplot(global_bleaching, aes(x=reorder(Ocean_Name, Ocean_Name, function(x)-length(x)))) +
+geom_bar(fill='light blue') +  labs(x='Ocean Name', y='Number of Bleaching Events', title= 'Number of Bleaching events per Ocean Region')
+```
+
+
+# How many bleaching events are there per ecoregion?
+```{r}
+global_bleaching %>% 
+ count(Ecoregion_Name)
+```
+
+```{r}
+global_bleaching %>% 
+   filter(Ecoregion_Name %in% c("Bahamas and Florida Keys", "Andaman Sea", "Belize and west Caribbean", "Hispaniola Puerto Rico and Lesser Antilles", "Society Islands French Polynesia", "North and central Red Sea", "Fiji", "Netherlands Antilles and south Caribbean", "Sulu Sea", "Central and northern Great Barrier Reef")) %>% 
+ggplot(aes(x=reorder(Ecoregion_Name, Ecoregion_Name, function(x)-length(x)))) +
+geom_bar(fill='red') +  labs(x='Eco-region Name',y='Number of Bleaching Events', title='Number of Bleaching Events per Eco-Region') + 
+  theme(axis.text.x = element_text(angle = 70 , vjust = 0.5))
+```
