@@ -5,3 +5,5 @@ I attempted to find relationships between variables such as depth, temperature, 
 
 
 The code for this thesis can be found in the thesis_code.Rmd file. The uploading of the datasets can also be found in the files Global_Bleaching_Data.Rmd and Bleach_and_Mortality.Rmd.
+
+My written report can be found at https://www.overleaf.com/read/krpcnjtzkzfd.
